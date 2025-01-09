@@ -37,8 +37,17 @@
 function init() {
   const studentForm = document.querySelector("#student-form");
   const studentsList = document.querySelector("#students-list");
+  const localStorageKey = "students";
+
+  restoreInputValues();
+
+  restoreStudents();
 
   itKnowledgeChange();
+
+  studentForm.addEventListener("input", function () {
+    saveInputValues();
+  });
 
   studentForm.addEventListener("submit", function (event) {
     event.preventDefault();
@@ -117,7 +126,7 @@ function init() {
 
     removeStudentButton.addEventListener("click", function () {
       studentItem.remove();
-
+      removeStudentFromLocalStorage({ name, surname });
       alertMessage(`Student (${name} ${surname}) was removed!`);
     });
 
@@ -135,11 +144,161 @@ function init() {
 
     studentsList.prepend(studentItem);
 
+    saveStudentToLocalStorage({
+      name,
+      surname,
+      age,
+      phone,
+      email,
+      itKnowledge,
+      group,
+      interests: Array.from(interests).map((interest) => interest.value),
+    });
+
     form.reset();
+    clearInputValues();
 
     const createStudentText = `Student (${name} ${surname}) was created!`;
     alertMessage(createStudentText);
   });
+
+  function saveInputValues() {
+    const inputs = studentForm.querySelectorAll("input, select");
+    const inputValues = {};
+
+    inputs.forEach((input) => {
+      if (input.type === "checkbox") {
+        inputValues[input.name] = input.checked;
+      } else {
+        inputValues[input.name] = input.value;
+      }
+    });
+
+    localStorage.setItem("formInputValues", JSON.stringify(inputValues));
+  }
+
+  function restoreInputValues() {
+    const savedValues = JSON.parse(localStorage.getItem("formInputValues"));
+
+    if (!savedValues) return;
+
+    const inputs = studentForm.querySelectorAll("input, select");
+
+    inputs.forEach((input) => {
+      if (input.type === "checkbox") {
+        input.checked = savedValues[input.name] || false;
+      } else {
+        input.value = savedValues[input.name] || "";
+      }
+    });
+  }
+
+  function clearInputValues() {
+    localStorage.removeItem("formInputValues");
+  }
+
+  function saveStudentToLocalStorage(student) {
+    const students = JSON.parse(localStorage.getItem(localStorageKey)) || [];
+    students.push(student);
+    localStorage.setItem(localStorageKey, JSON.stringify(students));
+  }
+
+  function restoreStudents() {
+    const students = JSON.parse(localStorage.getItem(localStorageKey)) || [];
+
+    students.forEach((student) => {
+      const studentItem = document.createElement("div");
+      studentItem.classList.add("student-item");
+
+      const nameElement = document.createElement("h2");
+      nameElement.textContent = `${student.name} ${student.surname}`;
+
+      const ageElement = document.createElement("p");
+      ageElement.textContent = `Age: ${student.age}`;
+
+      const phoneElement = document.createElement("p");
+      phoneElement.textContent = `Phone: ****`;
+
+      const emailElement = document.createElement("p");
+      emailElement.textContent = `Email: ****`;
+
+      const itKnowledgeElement = document.createElement("p");
+      itKnowledgeElement.textContent = `IT Knowledge: ${student.itKnowledge}`;
+
+      const groupElement = document.createElement("p");
+      groupElement.textContent = `Group: ${student.group} gr.`;
+
+      const interestsWrapper = document.createElement("div");
+      interestsWrapper.classList.add("interests-wrapper");
+
+      const interestsTitle = document.createElement("h3");
+      interestsTitle.textContent = "Interests:";
+
+      const interestsList = document.createElement("ul");
+
+      student.interests.forEach((interest) => {
+        const interestItem = document.createElement("li");
+        interestItem.textContent = interest;
+        interestsList.append(interestItem);
+      });
+
+      interestsWrapper.append(interestsTitle, interestsList);
+
+      const privateInfoButton = document.createElement("button");
+      privateInfoButton.textContent = "Show private info";
+
+      let showPrivateInfo = false;
+
+      privateInfoButton.addEventListener("click", function () {
+        showPrivateInfo = !showPrivateInfo;
+
+        if (showPrivateInfo) {
+          privateInfoButton.textContent = "Hide private info";
+          phoneElement.textContent = `Phone: ${student.phone}`;
+          emailElement.textContent = `Email: ${student.email}`;
+        } else {
+          privateInfoButton.textContent = "Show private info";
+          phoneElement.textContent = `Phone: ****`;
+          emailElement.textContent = `Email: ****`;
+        }
+      });
+
+      const removeStudentButton = document.createElement("button");
+      removeStudentButton.textContent = "Remove Student";
+
+      removeStudentButton.addEventListener("click", function () {
+        studentItem.remove();
+        removeStudentFromLocalStorage(student);
+        alertMessage(
+          `Student (${student.name} ${student.surname}) was removed!`
+        );
+      });
+
+      studentItem.append(
+        nameElement,
+        ageElement,
+        phoneElement,
+        emailElement,
+        itKnowledgeElement,
+        groupElement,
+        interestsWrapper,
+        privateInfoButton,
+        removeStudentButton
+      );
+
+      studentsList.prepend(studentItem);
+    });
+  }
+
+  function removeStudentFromLocalStorage(studentToRemove) {
+    let students = JSON.parse(localStorage.getItem(localStorageKey)) || [];
+    students = students.filter(
+      (student) =>
+        student.name !== studentToRemove.name ||
+        student.surname !== studentToRemove.surname
+    );
+    localStorage.setItem(localStorageKey, JSON.stringify(students));
+  }
 }
 
 init();
